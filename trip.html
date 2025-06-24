@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>An Interactive Guide to Paris</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Warm Neutrals & Deep Gold -->
+    <!-- Application Structure Plan: The application is structured as a single-page interactive guide, moving away from the linear blog format. The core is a filterable grid of location cards. A top navigation bar with buttons ('All', 'Iconic Sights', 'Hidden Gems') allows users to control the displayed content. Clicking on a location card opens a modal window with detailed information. This structure was chosen to transform the passive experience of reading a blog into an active process of exploration. It encourages user engagement, allows for quick filtering based on interest, and presents information in a digestible, focused manner via the modal view, which is a superior user experience for discovering multiple distinct points of interest. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Main categories (Icons vs. Gems). -> Goal: Organize & Navigate. -> Viz/Method: HTML/Tailwind styled buttons as navigation tabs. -> Interaction: onClick handler in JS filters a data array and re-renders the visible cards. -> Justification: Provides clear, immediate control over the content, which is more intuitive than scrolling through a long article.
+        - Report Info: Individual locations. -> Goal: Inform & Organize. -> Viz/Method: Interactive cards styled with HTML/Tailwind, featuring a title and a relevant Unicode character as an icon. -> Interaction: onClick handler triggers a modal display. -> Justification: Cards are a modern, scannable way to present a collection of items. Unicode icons add visual flair without needing external image assets.
+        - Report Info: Detailed descriptions of each location. -> Goal: Inform (in-depth). -> Viz/Method: A modal window, built with HTML/Tailwind and controlled by JS. -> Interaction: Appears on card click, can be dismissed with a button. -> Justification: Focuses user attention on a single location's details without losing their place on the main screen.
+        - Report Info: Culinary advice & final thoughts. -> Goal: Inform. -> Viz/Method: A distinct, static text section near the bottom. -> Interaction: None. -> Justification: This content is summary-level and doesn't require complex interaction.
+        - Gemini API Integration: Allow users to ask specific questions about a location within its modal. -> Goal: Enhance information discovery, provide dynamic content. -> Viz/Method: Textarea for input, button to trigger API call, div to display LLM response, loading indicator. -> Interaction: User types question, clicks button, LLM response appears. -> Justification: Leverages LLM capabilities to offer deeper, on-demand insights beyond static content, making the guide more interactive and helpful.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. No Chart.js/Plotly.js needed as there is no quantitative data. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .nav-btn {
+            transition: all 0.3s ease;
+        }
+        .nav-btn.active {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-stone-50 text-stone-800">
+
+    <div id="app-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        
+        <header class="text-center mb-8 md:mb-12">
+            <h1 style="font-family: 'Playfair Display', serif;" class="text-4xl md:text-6xl font-bold text-stone-900">A Parisian Adventure</h1>
+            <p class="mt-2 md:mt-4 text-lg text-stone-600">From Iconic Landmarks to Hidden Gems</p>
+        </header>
+
+        <main>
+            <section id="interactive-explorer" class="bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm p-4 sm:p-6 md:p-8 mb-12">
+                <div class="mb-6 md:mb-8 text-center">
+                    <p class="text-stone-700 max-w-3xl mx-auto">
+                        Welcome to your interactive guide to Paris. The city's famous sights and secret spots are waiting to be discovered. Use the filters below to navigate between world-renowned icons and charming hidden gems. Click on any card to learn more about that location.
+                    </p>
+                    <div id="nav-filters" class="flex justify-center flex-wrap gap-3 mt-6">
+                        <button data-filter="all" class="nav-btn active bg-amber-800 text-white font-semibold py-2 px-5 rounded-full shadow-md">All Spots</button>
+                        <button data-filter="icon" class="nav-btn bg-white text-amber-800 font-semibold py-2 px-5 rounded-full shadow-md hover:bg-amber-50">Iconic Sights</button>
+                        <button data-filter="gem" class="nav-btn bg-white text-amber-800 font-semibold py-2 px-5 rounded-full shadow-md hover:bg-amber-50">Hidden Gems</button>
+                    </div>
+                </div>
+
+                <div id="locations-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                </div>
+            </section>
+
+            <section id="final-thoughts" class="text-center bg-amber-50/50 rounded-2xl p-6 md:p-10">
+                 <h2 style="font-family: 'Playfair Display', serif;" class="text-3xl font-bold text-amber-900 mb-4">Parisian Flavors & Final Thoughts</h2>
+                 <div class="max-w-3xl mx-auto text-stone-700 space-y-4 text-left">
+                    <p>No trip to Paris is complete without indulging in its culinary delights. Start your day with a warm croissant and coffee from a local boulangerie, savor a sweet or savory crêpe from a street vendor, enjoy a leisurely meal at a sidewalk bistro, and certainly don't forget to sample some colorful macarons!</p>
+                    <p>Paris is a city that rewards exploration. While the iconic sights are essential, daring to wander off the main avenues will lead you to unexpected discoveries and create truly unforgettable memories. So pack your walking shoes, an open mind, and get ready to fall in love with Paris!</p>
+                 </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 opacity-0 invisible">
+        <div id="modal-content" class="modal-content bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 transform scale-95">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" style="font-family: 'Playfair Display', serif;" class="text-3xl font-bold text-stone-900"></h3>
+                <button id="modal-close-btn" class="text-stone-500 hover:text-stone-900 transition-colors">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <p id="modal-description" class="text-stone-700 leading-relaxed"></p>
+
+            <div class="mt-8 pt-6 border-t border-stone-200">
+                <h4 class="text-xl font-bold text-stone-800 mb-3">Ask Gemini about this location</h4>
+                <textarea id="gemini-input" class="w-full p-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none mb-3 resize-y min-h-[60px]" placeholder="e.g., 'What's the best time to visit?' or 'Tell me a fun fact about this place.'"></textarea>
+                <button id="ask-gemini-btn" class="bg-amber-800 text-white font-semibold py-2 px-5 rounded-full shadow-md hover:bg-amber-700 transition-colors flex items-center justify-center">
+                    Ask Gemini ✨
+                    <span id="gemini-loading" class="hidden ml-2 w-4 h-4 border-2 border-white border-solid rounded-full animate-spin border-t-transparent"></span>
+                </button>
+                <div id="gemini-response" class="mt-4 p-4 bg-amber-50/50 rounded-lg text-stone-700 leading-relaxed min-h-[50px] flex items-center justify-center text-center italic">
+                    Your answers will appear here.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const locationsData = [
+                {
+                    name: 'The Eiffel Tower',
+                    category: 'icon',
+                    icon: '🗼',
+                    description: "You can't visit Paris without gazing up at its most famous symbol. Whether you climb to the top for panoramic views, picnic on the Champ de Mars, or simply admire its sparkling lights at night, the Eiffel Tower is pure magic. *Tip: Book your tickets online well in advance to avoid long queues!*"
+                },
+                {
+                    name: 'The Louvre Museum',
+                    category: 'icon',
+                    icon: '🏛️',
+                    description: "Home to thousands of works of art, including the enigmatic Mona Lisa and the majestic Venus de Milo, the Louvre is a cultural powerhouse. It's immense, so plan your visit by picking a few key sections you want to focus on."
+                },
+                {
+                    name: 'Notre Dame Cathedral',
+                    category: 'icon',
+                    icon: '⛪',
+                    description: "Even after the devastating fire, Notre Dame stands as a testament to Gothic architecture and Parisian history. While you can't go inside yet, admiring its exterior and the ongoing restoration efforts is a poignant experience."
+                },
+                {
+                    name: 'Arc de Triomphe & Champs-Élysées',
+                    category: 'icon',
+                    icon: '🏛️',
+                    description: "Standing proudly at the western end of the Champs-Élysées, the Arc de Triomphe offers fantastic views of the city's radiating avenues. Stroll down the elegant Champs-Élysées, famous for its luxury shops and theaters."
+                },
+                {
+                    name: 'Sacré-Coœur & Montmartre',
+                    category: 'icon',
+                    icon: '⛪',
+                    description: "Perched atop the highest point in the city, the Sacré-Cœur Basilica offers stunning views over Paris. Explore the charming, winding streets of Montmartre, discover Place du Tertre with its artists, and soak in the bohemian atmosphere."
+                },
+                {
+                    name: 'Musée de la Vie Romantique',
+                    category: 'gem',
+                    icon: '🎨',
+                    description: "Tucked away in a beautiful cobbled courtyard in Pigalle, this charming museum feels like stepping into a 19th-century salon. It celebrates the Romantic era, focusing on figures like George Sand and Frédéric Chopin. It's small, free, and incredibly atmospheric."
+                },
+                {
+                    name: 'Passage des Panoramas',
+                    category: 'gem',
+                    icon: '🛍️',
+                    description: "One of Paris's oldest covered passages, dating back to 1799. It's a delightful labyrinth of unique shops, stamp dealers, vintage boutiques, and charming restaurants. It offers a glimpse into a bygone era of Parisian commerce."
+                },
+                {
+                    name: 'Canal Saint-Martin',
+                    category: 'gem',
+                    icon: '⛵',
+                    description: "Escape the bustling city center and discover the tranquil beauty of Canal Saint-Martin. This area is popular with locals, especially in the evenings, for picnicking along the banks, watching the locks open and close, and enjoying trendy cafes and boutiques. Take a boat tour or simply wander and soak in the relaxed vibe."
+                },
+                {
+                    name: 'Parc des Buttes-Chaumont',
+                    category: 'gem',
+                    icon: '🌳',
+                    description: "A truly stunning and underrated park in the 19th arrondissement. Featuring dramatic cliffs, a grotto with a waterfall, a suspension bridge, and a Greco-Roman temple perched on an island, it's a perfect spot for a leisurely afternoon, offering spectacular views of Montmartre."
+                },
+                {
+                    name: 'Rue Crémieux',
+                    category: 'gem',
+                    icon: '🏘️',
+                    description: "Prepare your camera for this one! Tucked away near Gare de Lyon, Rue Crémieux is a pedestrian-only street famous for its pastel-colored houses, potted plants, and quaint charm. It feels like a little slice of the English countryside in the heart of Paris."
+                }
+            ];
+
+            const grid = document.getElementById('locations-grid');
+            const filterButtons = document.querySelectorAll('#nav-filters button');
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            const modalTitle = document.getElementById('modal-title');
+            const modalDescription = document.getElementById('modal-description');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+
+            // Gemini API related elements
+            const geminiInput = document.getElementById('gemini-input');
+            const askGeminiBtn = document.getElementById('ask-gemini-btn');
+            const geminiResponse = document.getElementById('gemini-response');
+            const geminiLoading = document.getElementById('gemini-loading');
+            let currentLocationName = '';
+
+            const renderCards = (filter = 'all') => {
+                grid.innerHTML = '';
+                const filteredData = locationsData.filter(item => filter === 'all' || item.category === filter);
+
+                filteredData.forEach(location => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col items-center text-center cursor-pointer';
+                    card.dataset.name = location.name;
+                    card.innerHTML = `
+                        <div class="text-6xl mb-4">${location.icon}</div>
+                        <h3 class="text-xl font-bold text-stone-800">${location.name}</h3>
+                    `;
+                    grid.appendChild(card);
+                });
+            };
+
+            const openModal = (locationName) => {
+                const location = locationsData.find(l => l.name === locationName);
+                if (location) {
+                    currentLocationName = location.name; // Store current location name
+                    modalTitle.textContent = location.name;
+                    modalDescription.innerHTML = location.description.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+                    geminiInput.value = ''; // Clear previous input
+                    geminiResponse.textContent = 'Your answers will appear here.'; // Reset response
+                    geminiResponse.classList.add('italic', 'items-center', 'justify-center', 'text-center');
+
+                    modal.classList.remove('invisible', 'opacity-0');
+                    modalContent.classList.remove('scale-95');
+                }
+            };
+            
+            const closeModal = () => {
+                modal.classList.add('opacity-0');
+                modalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('invisible');
+                }, 300);
+            };
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    filterButtons.forEach(btn => {
+                        btn.classList.remove('active', 'bg-amber-800', 'text-white');
+                        btn.classList.add('bg-white', 'text-amber-800', 'hover:bg-amber-50');
+                    });
+                    button.classList.add('active', 'bg-amber-800', 'text-white');
+                    button.classList.remove('bg-white', 'text-amber-800', 'hover:bg-amber-50');
+                    renderCards(button.dataset.filter);
+                });
+            });
+
+            grid.addEventListener('click', (e) => {
+                const card = e.target.closest('[data-name]');
+                if (card) {
+                    openModal(card.dataset.name);
+                }
+            });
+
+            modalCloseBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !modal.classList.contains('invisible')) {
+                    closeModal();
+                }
+            });
+
+            // Gemini API Integration
+            askGeminiBtn.addEventListener('click', async () => {
+                const userQuestion = geminiInput.value.trim();
+                if (!userQuestion) {
+                    geminiResponse.textContent = 'Please type a question!';
+                    geminiResponse.classList.remove('italic', 'items-center', 'justify-center', 'text-center');
+                    return;
+                }
+
+                geminiResponse.textContent = '';
+                geminiLoading.classList.remove('hidden');
+                askGeminiBtn.disabled = true;
+                geminiResponse.classList.remove('italic', 'items-center', 'justify-center', 'text-center');
+
+                const prompt = `Regarding ${currentLocationName} in Paris: ${userQuestion}. Please provide a concise answer related to tourism, history, or cultural significance of this place.`;
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                // IMPORTANT: Replace "YOUR_API_KEY_HERE" with your actual Gemini API key when running locally.
+                // When running in the Canvas environment, leave it as an empty string ("") as the key is injected automatically.
+                const apiKey = "AIzaSyBZaDs09pwsgyJjMF_QkjL1tZE9gXrbY2c"; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        geminiResponse.textContent = text;
+                    } else {
+                        geminiResponse.textContent = 'Could not get a response. Please try again.';
+                    }
+                } catch (error) {
+                    geminiResponse.textContent = 'An error occurred while fetching the response. Please try again later.';
+                    console.error('Gemini API Error:', error);
+                } finally {
+                    geminiLoading.classList.add('hidden');
+                    askGeminiBtn.disabled = false;
+                }
+            });
+
+            renderCards();
+        });
+    </script>
+</body>
+</html>
